@@ -7,6 +7,7 @@ from PIL import Image
 
 class BiRefNet:
     def __init__(self, model_name: str = "ZhengPeng7/BiRefNet"):
+        self.model_name = model_name
         self.model = AutoModelForImageSegmentation.from_pretrained(
             model_name, trust_remote_code=True
         )
@@ -18,7 +19,7 @@ class BiRefNet:
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ]
         )
-    
+
     def to(self, device: str):
         self.model.to(device)
 
@@ -39,4 +40,3 @@ class BiRefNet:
         mask = pred_pil.resize(image_size)
         image.putalpha(mask)
         return image
-    
