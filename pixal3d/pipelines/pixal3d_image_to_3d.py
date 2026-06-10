@@ -590,6 +590,22 @@ class Pixal3DImageTo3DPipeline(Pipeline):
         tex_voxels = self.decode_tex_slat(tex_slat, subs)
         out_mesh = []
         torch.cuda.synchronize()
+        # CuMesh fill_holes()/get_edges() allocates raw cudaMalloc buffers (~84 bytes/face):
+        # Buffer::init cudaMalloc at src/utils.h:43, edges/sort/cub/edge2face_cnt buffers at
+        # src/connectivity.cu:123-150 (CuMesh @ 12289e1062f0603f2f0d0771b02e1395d247f26f).
+        # Raw cudaMalloc cannot draw from PyTorch's reserved cache, so release the blocks
+        # left free-but-reserved by the shape/tex decoder forwards before mesh repair.
+        free_before, total_device = torch.cuda.mem_get_info()
+        reserved_before = torch.cuda.memory_reserved()
+        allocated_before = torch.cuda.memory_allocated()
+        torch.cuda.empty_cache()
+        free_after, _ = torch.cuda.mem_get_info()
+        print(
+            "[Pipeline] decode_latent fill_holes boundary: "
+            f"driver_free_before={free_before} driver_free_after={free_after} "
+            f"torch_reserved_before={reserved_before} torch_allocated_before={allocated_before} "
+            f"device_total={total_device}"
+        )
         for m, v in zip(meshes, tex_voxels):
             m.fill_holes()
             out_mesh.append(
