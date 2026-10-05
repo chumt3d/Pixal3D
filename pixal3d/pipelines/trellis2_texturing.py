@@ -10,7 +10,7 @@ from ..modules.sparse import SparseTensor
 from ..modules import image_feature_extractor
 import o_voxel
 import cumesh
-from tiny3d_renderer import UVSurface, interpolate
+from tiny3d_renderer import UVSurface, interpolate, validate_faces
 import cv2
 import flex_gemm
 
@@ -295,7 +295,9 @@ class Trellis2TexturingPipeline(Pipeline):
         faces = mesh.faces
         normals = mesh.vertex_normals
         vertices_torch = torch.from_numpy(vertices).float().cuda()
-        faces_torch = torch.from_numpy(faces).int().cuda()
+        faces_torch = torch.from_numpy(faces).cuda()
+        validate_faces(faces_torch, len(vertices_torch))
+        faces_torch = faces_torch.to(dtype=torch.int32)
         if hasattr(mesh, 'visual') and hasattr(mesh.visual, 'uv') and mesh.visual.uv is not None:
             uvs = mesh.visual.uv.copy()
             uvs[:, 1] = 1 - uvs[:, 1]
