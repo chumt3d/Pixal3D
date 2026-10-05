@@ -1,4 +1,4 @@
-"""Unlit inference adapter for Tiny3D's shared Warp backend."""
+"""Unlit inference adapter for Tiny3D's shared DRTK inference backend."""
 from easydict import EasyDict
 from tiny3d_renderer import MeshRenderer as _MeshRenderer, intrinsics_to_projection
 

@@ -314,7 +314,7 @@ class Trellis2TexturingPipeline(Pipeline):
             uvs = uvs_torch.cpu().numpy()
             normals = normals[vmap.cpu().numpy()]
                 
-        # Reuse one UV-space tree for the complete bake.
+        # Reuse the UV coverage for the complete bake.
         uv_surface = UVSurface(uvs_torch, faces_torch)
         rast = uv_surface.rasterize((texture_size, texture_size))
         mask = rast.mask
