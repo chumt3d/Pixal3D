@@ -1,5 +1,6 @@
 from typing import *
 import torch
+from tiny3d_renderer import validate_faces
 from ..voxel import Voxel
 import cumesh
 from flex_gemm.ops.grid_sample import grid_sample_3d
@@ -12,6 +13,7 @@ class Mesh:
         vertex_attrs=None
     ):
         self.vertices = vertices.float()
+        validate_faces(faces, len(vertices))
         self.faces = faces.int()
         self.vertex_attrs = vertex_attrs
         
@@ -166,6 +168,7 @@ class MeshWithPbrMaterial(Mesh):
         materials: List[PbrMaterial],
     ):
         self.vertices = vertices.float()
+        validate_faces(faces, len(vertices))
         self.faces = faces.int()
         self.material_ids = material_ids    # [M]
         self.uv_coords = uv_coords          # [M, 3, 2]
@@ -199,6 +202,7 @@ class MeshWithVoxel(Mesh, Voxel):
         layout: Dict = {},
     ):
         self.vertices = vertices.float()
+        validate_faces(faces, len(vertices))
         self.faces = faces.int()
         self.origin = torch.tensor(origin, dtype=torch.float32, device=self.device)
         self.voxel_size = voxel_size

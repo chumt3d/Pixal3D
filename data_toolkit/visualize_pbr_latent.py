@@ -26,7 +26,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import pixal3d.models as models
 import pixal3d.modules.sparse as sp
 from pixal3d.representations import MeshWithVoxel
-from pixal3d.renderers import EnvMap
 from pixal3d.utils import render_utils
 import o_voxel
 
@@ -47,17 +46,6 @@ def load_latent(latent_file):
     return sp.SparseTensor(feats.cuda(), coords.cuda())
 
 
-def load_envmaps(device='cuda'):
-    """Load HDRI environment maps from assets/."""
-    base = os.path.join(os.path.dirname(__file__), '..', 'assets', 'hdri')
-    envmaps = {}
-    for name in ['forest', 'sunset', 'courtyard']:
-        path = os.path.join(base, f'{name}.exr')
-        if os.path.exists(path):
-            img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            envmaps[name] = EnvMap(torch.tensor(img, dtype=torch.float32, device=device))
-    return envmaps
 
 
 def main():
@@ -166,8 +154,7 @@ def main():
     print("[Step 5] Rendering PBR front view (proj-aligned)...")
     transforms_file = os.path.join(renders_dir, "transforms.json")
     shape_scale_file = os.path.join(shape_latent_dir, f"view{view_idx:02d}_scale.json")
-    envmaps = load_envmaps(device='cuda')
-    if os.path.exists(transforms_file) and os.path.exists(shape_scale_file) and envmaps:
+    if os.path.exists(transforms_file) and os.path.exists(shape_scale_file):
         with open(transforms_file) as f:
             transforms = json.load(f)
         with open(shape_scale_file) as f:
@@ -192,7 +179,7 @@ def main():
         print(f"  total_scale={total_scale:.4f}, distance={distance:.4f}, fov={camera_angle_x:.4f}")
         renders = render_utils.render_proj_aligned_video(
             scaled_mesh, camera_angle_x=camera_angle_x, distance=distance,
-            resolution=1024, num_frames=1, envmap=envmaps, near=near, far=far,
+            resolution=1024, num_frames=1, near=near, far=far,
         )
         for key, frames in renders.items():
             for i, frame in enumerate(frames):
@@ -205,8 +192,6 @@ def main():
             print("  No transforms.json found, skipping rendering.")
         if not os.path.exists(shape_scale_file):
             print("  No scale file found, skipping rendering.")
-        if not envmaps:
-            print("  No HDRI envmaps found, skipping PBR rendering.")
 
     # Free GPU
     del shape_dec, pbr_dec, shape_slat, pbr_slat, meshes, subs, vox

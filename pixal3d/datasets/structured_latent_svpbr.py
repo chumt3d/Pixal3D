@@ -10,7 +10,7 @@ from .. import models
 from .components import StandardDatasetBase, ImageConditionedMixin, ViewImageConditionedMixin
 from ..modules.sparse import SparseTensor, sparse_cat
 from ..representations import MeshWithVoxel
-from ..renderers import PbrMeshRenderer, EnvMap
+from ..renderers import MeshRenderer
 from ..utils.data_utils import load_balanced_group_indices
 from ..utils.render_utils import yaw_pitch_r_fov_to_extrinsics_intrinsics
 
@@ -115,16 +115,11 @@ class SLatPbrVisMixin:
         exts, ints = yaw_pitch_r_fov_to_extrinsics_intrinsics(yaw, pitch, 2, 30)
         
         # render
-        renderer = PbrMeshRenderer()
+        renderer = MeshRenderer()
         renderer.rendering_options.resolution = 512
         renderer.rendering_options.near = 1
         renderer.rendering_options.far = 100
         renderer.rendering_options.ssaa = 2
-        renderer.rendering_options.peel_layers = 8
-        envmap = EnvMap(torch.tensor(
-            cv2.cvtColor(cv2.imread('assets/hdri/forest.exr', cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB),
-            dtype=torch.float32, device='cuda'
-        ))
         
         images = {}
         gt_view_images = {}
@@ -147,7 +142,7 @@ class SLatPbrVisMixin:
             tile = [2, 2]
             try:
                 for j, (ext, intr) in enumerate(zip(exts, ints)):
-                    res = renderer.render(representation, ext, intr, envmap=envmap)
+                    res = renderer.render(representation, ext, intr)
                     for k, v in res.items():
                         if k not in images:
                             images[k] = []
@@ -208,7 +203,7 @@ class SLatPbrVisMixin:
                     renderer.rendering_options.near = max(0.01, distance - mesh_half_size - 0.5)
                     renderer.rendering_options.far = distance + mesh_half_size + 0.5
                     
-                    gt_res = renderer.render(scaled_rep, gt_ext, gt_int, envmap=envmap)
+                    gt_res = renderer.render(scaled_rep, gt_ext, gt_int)
                     for k, v in gt_res.items():
                         gt_key = f'gt_view_{k}'
                         if gt_key not in gt_view_images:

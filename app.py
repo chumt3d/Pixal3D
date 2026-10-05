@@ -38,7 +38,6 @@ from fastapi.staticfiles import StaticFiles
 
 from pixal3d.modules.sparse import SparseTensor
 from pixal3d.pipelines import Pixal3DImageTo3DPipeline
-from pixal3d.renderers import EnvMap
 from pixal3d.utils import render_utils
 import o_voxel
 
@@ -54,9 +53,6 @@ MODES = [
     {"name": "Normal", "icon": "assets/app/normal.png", "render_key": "normal"},
     {"name": "Clay render", "icon": "assets/app/clay.png", "render_key": "clay"},
     {"name": "Base color", "icon": "assets/app/basecolor.png", "render_key": "base_color"},
-    {"name": "HDRI forest", "icon": "assets/app/hdri_forest.png", "render_key": "shaded_forest"},
-    {"name": "HDRI sunset", "icon": "assets/app/hdri_sunset.png", "render_key": "shaded_sunset"},
-    {"name": "HDRI courtyard", "icon": "assets/app/hdri_courtyard.png", "render_key": "shaded_courtyard"},
 ]
 STEPS = 8
 
@@ -119,11 +115,10 @@ def load_moge_model(device="cuda", model_name=MOGE_MODEL_NAME):
 # Global instances (lazy loaded or loaded at start)
 pipeline = None
 moge_model = None
-envmap = None
 LOW_VRAM = os.environ.get("LOW_VRAM", "0") == "1"
 
 def init_models():
-    global pipeline, moge_model, envmap
+    global pipeline, moge_model
     with init_lock:
         if pipeline is not None:
             return
@@ -192,14 +187,7 @@ def init_models():
         else:
             moge_model = load_moge_model(device="cuda")
         
-        print("[EnvMap] Loading environment maps...")
         _base = os.path.dirname(os.path.abspath(__file__))
-        _envmap_device = 'cpu' if LOW_VRAM else 'cuda'
-        envmap = {
-            'forest': EnvMap(torch.tensor(cv2.cvtColor(cv2.imread(os.path.join(_base, 'assets/hdri/forest.exr'), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB), dtype=torch.float32, device=_envmap_device)),
-            'sunset': EnvMap(torch.tensor(cv2.cvtColor(cv2.imread(os.path.join(_base, 'assets/hdri/sunset.exr'), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB), dtype=torch.float32, device=_envmap_device)),
-            'courtyard': EnvMap(torch.tensor(cv2.cvtColor(cv2.imread(os.path.join(_base, 'assets/hdri/courtyard.exr'), cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB), dtype=torch.float32, device=_envmap_device)),
-        }
 
 # ============================================================================
 # Utilities
@@ -462,27 +450,15 @@ def generate_3d(
     state_path = pack_state(shape_slat, tex_slat, res)
     
     _update_progress("Rendering views", 0, 1)
-    mesh.simplify(16777216)
     cam_dist = camera_params['distance']
     near = max(0.01, cam_dist - 2.0)
     far = cam_dist + 10.0
-    if LOW_VRAM:
-        for v in envmap.values():
-            v.image = v.image.cuda()
-            if hasattr(v, '_nvdiffrec_envlight'):
-                del v._nvdiffrec_envlight
     renders = render_utils.render_proj_aligned_video(
         mesh, camera_angle_x=camera_params['camera_angle_x'],
         distance=cam_dist, resolution=1024,
-        num_frames=STEPS, envmap=envmap,
+        num_frames=STEPS,
         near=near, far=far,
     )
-    if LOW_VRAM:
-        for v in envmap.values():
-            if hasattr(v, '_nvdiffrec_envlight'):
-                del v._nvdiffrec_envlight
-            v.image = v.image.cpu()
-        torch.cuda.empty_cache()
     _update_progress("Rendering views", 1, 1)
     
     # Save renders and return paths

@@ -10,7 +10,7 @@ from ..modules.sparse import SparseTensor
 from ..modules import image_feature_extractor
 import o_voxel
 import cumesh
-import nvdiffrast.torch as dr
+from tiny3d_renderer import UVSurface, interpolate
 import cv2
 import flex_gemm
 
@@ -312,16 +312,12 @@ class Trellis2TexturingPipeline(Pipeline):
             uvs = uvs_torch.cpu().numpy()
             normals = normals[vmap.cpu().numpy()]
                 
-        # rasterize
-        ctx = dr.RasterizeCudaContext()
-        uvs_torch = torch.cat([uvs_torch * 2 - 1, torch.zeros_like(uvs_torch[:, :1]), torch.ones_like(uvs_torch[:, :1])], dim=-1).unsqueeze(0)
-        rast, _ = dr.rasterize(
-            ctx, uvs_torch, faces_torch,
-            resolution=[texture_size, texture_size],
-        )
-        mask = rast[0, ..., 3] > 0
-        pos = dr.interpolate(vertices_torch.unsqueeze(0), rast, faces_torch)[0][0]
-        
+        # Reuse one UV-space tree for the complete bake.
+        uv_surface = UVSurface(uvs_torch, faces_torch)
+        rast = uv_surface.rasterize((texture_size, texture_size))
+        mask = rast.mask
+        pos, _ = interpolate(vertices_torch, rast, faces_torch)
+
         attrs = torch.zeros(texture_size, texture_size, pbr_voxel.shape[1], device=self.device)
         attrs[mask] = flex_gemm.ops.grid_sample.grid_sample_3d(
             pbr_voxel.feats,
