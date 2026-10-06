@@ -64,7 +64,7 @@ class Mesh:
         
         mesh = cumesh.CuMesh()
         mesh.init(vertices, faces)
-        mesh.remove_faces(face_mask)
+        mesh.remove_faces(face_mask.contiguous())
         new_vertices, new_faces = mesh.read()
         
         self.vertices = new_vertices.to(self.device)

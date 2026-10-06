@@ -53,7 +53,7 @@ class VoxelRenderer:
         voxel_size = voxel.voxel_size
         
         # Render
-        render_ret = renderer.render(positions, attrs, voxel_size, extrinsics, intrinsics)
+        render_ret = renderer.render(positions.contiguous(), attrs.contiguous(), voxel_size, extrinsics, intrinsics)
         
         ret = {
             'depth': render_ret['depth'],

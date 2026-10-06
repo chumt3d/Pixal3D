@@ -199,7 +199,7 @@ class Trellis2TexturingPipeline(Pipeline):
         faces = torch.from_numpy(mesh.faces).long()
         
         voxel_indices, dual_vertices, intersected = o_voxel.convert.mesh_to_flexible_dual_grid(
-            vertices.cpu(), faces.cpu(),
+            vertices.cpu().contiguous(), faces.cpu().contiguous(),
             grid_size=resolution,
             aabb=[[-0.5,-0.5,-0.5],[0.5,0.5,0.5]],
             face_weight=1.0,
@@ -304,7 +304,7 @@ class Trellis2TexturingPipeline(Pipeline):
             uvs_torch = torch.from_numpy(uvs).float().cuda()
         else:
             _cumesh = cumesh.CuMesh()
-            _cumesh.init(vertices_torch, faces_torch)
+            _cumesh.init(vertices_torch.contiguous(), faces_torch.contiguous())
             vertices_torch, faces_torch, uvs_torch, vmap = _cumesh.uv_unwrap(return_vmaps=True)
             vertices_torch = vertices_torch.cuda()
             faces_torch = faces_torch.cuda()
@@ -322,10 +322,10 @@ class Trellis2TexturingPipeline(Pipeline):
 
         attrs = torch.zeros(texture_size, texture_size, pbr_voxel.shape[1], device=self.device)
         attrs[mask] = flex_gemm.ops.grid_sample.grid_sample_3d(
-            pbr_voxel.feats,
-            pbr_voxel.coords,
+            pbr_voxel.feats.contiguous(),
+            pbr_voxel.coords.contiguous(),
             shape=torch.Size([*pbr_voxel.shape, *pbr_voxel.spatial_shape]),
-            grid=((pos[mask] + 0.5) * resolution).reshape(1, -1, 3),
+            grid=((pos[mask] + 0.5) * resolution).reshape(1, -1, 3).contiguous(),
             mode='trilinear',
         )
         
