@@ -299,4 +299,4 @@ This project is released under the [MIT License](LICENSE). The third-party compo
 
 ### Tiny3D renderer fork
 
-Inference rendering and UV baking require the Tiny3D-owned `tiny3d-renderer==0.1.0` wheel from the companion chum pull request (NVIDIA Warp 1.13.0). Install that wheel with `sfw uv pip install --no-deps <wheel>` in the same environment as the model fork. Preview and dataset visualization are unlit; environment lighting and depth peeling were retired. Training models and generated PBR material channels are retained.
+Inference rendering and UV baking require the Tiny3D-owned `tiny3d-renderer==0.1.0` wheel from the companion chum pull request (attributed MIT DRTK native operators, BSD PyTorch3D clipping and Torch SSAA). Install that wheel with `sfw uv pip install --no-deps <wheel>` in the same environment as the model fork. Preview and dataset visualization are unlit; environment lighting and depth peeling were retired. Training models and generated PBR material channels are retained.
