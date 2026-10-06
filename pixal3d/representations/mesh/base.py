@@ -224,9 +224,10 @@ class MeshWithVoxel(Mesh, Voxel):
         )
         
     def query_attrs(self, xyz):
-        grid = ((xyz - self.origin) / self.voxel_size).reshape(1, -1, 3)
+        # FlexGEMM 6dd94a8 reads packed query[3*i+k] without tensor strides.
+        grid = ((xyz - self.origin) / self.voxel_size).reshape(1, -1, 3).contiguous()
         vertex_attrs = grid_sample_3d(
-            self.attrs,
+            self.attrs.contiguous(),
             torch.cat([torch.zeros_like(self.coords[..., :1]), self.coords], dim=-1),
             self.voxel_shape,
             grid,
