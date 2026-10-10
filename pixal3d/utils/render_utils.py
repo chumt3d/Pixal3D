@@ -9,6 +9,9 @@ from ..renderers import MeshRenderer, VoxelRenderer
 from ..representations import Mesh, Voxel, MeshWithPbrMaterial, MeshWithVoxel
 from .random_utils import sphere_hammersley_sequence
 
+# tiny3d.forward_preview_512.v1; measured acceptance: gha-38010507401-1.
+_PREVIEW_512_SSAA = 3
+
 
 def yaw_pitch_r_fov_to_extrinsics_intrinsics(yaws, pitchs, rs, fovs):
     is_list = isinstance(yaws, list)
@@ -46,14 +49,19 @@ def get_renderer(sample, **kwargs):
         renderer.rendering_options.resolution = kwargs.get('resolution', 512)
         renderer.rendering_options.near = kwargs.get('near', 1)
         renderer.rendering_options.far = kwargs.get('far', 100)
-        renderer.rendering_options.ssaa = kwargs.get('ssaa', 2)
+        renderer.rendering_options.ssaa = kwargs.get(
+            'ssaa', _PREVIEW_512_SSAA if renderer.rendering_options.resolution == 512 else 2
+        )
     elif isinstance(sample, Mesh):
         renderer = MeshRenderer()
         renderer.rendering_options.resolution = kwargs.get('resolution', 512)
         renderer.rendering_options.near = kwargs.get('near', 1)
         renderer.rendering_options.far = kwargs.get('far', 100)
-        renderer.rendering_options.ssaa = kwargs.get('ssaa', 2)
         renderer.rendering_options.chunk_size = kwargs.get('chunk_size', None)
+        renderer.rendering_options.ssaa = kwargs.get(
+            'ssaa', _PREVIEW_512_SSAA
+            if renderer.rendering_options.resolution == 512 and renderer.rendering_options.chunk_size is None else 2
+        )
     elif isinstance(sample, Voxel):
         renderer = VoxelRenderer()
         renderer.rendering_options.resolution = kwargs.get('resolution', 512)
